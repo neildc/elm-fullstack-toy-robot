@@ -35,7 +35,7 @@ update msg model =
         -- A new client has joined! Send them history
         ClientConnected sessionId clientId ->
             ( model
-            , Lamdera.sendToFrontend clientId (InitFromBackend sessionId model.commandHistory)
+            , Lamdera.sendToFrontend clientId (InitFromBackend clientId model.commandHistory)
             )
 
 
