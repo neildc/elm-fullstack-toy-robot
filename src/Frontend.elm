@@ -419,11 +419,13 @@ viewParser model =
                 , "LEFT"
                 , "RIGHT"
                 ]
-        , Html.div []
-            [ Html.input
-                [ Html.Events.onInput UpdateInputText
+        , div [ style "display" "flex", style "flex" "row" ]
+            [ Html.form [ Html.Events.onSubmit ParseAndExecuteCommand ]
+                [ Html.input
+                    [ Html.Events.onInput UpdateInputText
+                    ]
+                    []
                 ]
-                []
             , Html.button
                 [ Html.Events.onClick ParseAndExecuteCommand ]
                 [ Html.text "GO" ]
