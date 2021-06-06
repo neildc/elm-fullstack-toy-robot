@@ -13,8 +13,10 @@ module Types exposing
     , ToFrontend(..)
     , const_MAX_XorY
     , defaultBoundedInt
+    , directionToString
     , getBoundedInt
     , makeBoundedInt
+    , positionToString
     )
 
 import Browser exposing (UrlRequest)
@@ -89,8 +91,33 @@ type Direction
     | South
 
 
+directionToString dir =
+    case dir of
+        North ->
+            "North"
+
+        East ->
+            "East"
+
+        South ->
+            "South"
+
+        West ->
+            "West"
+
+
 type alias Position =
     { x : BoundedInt, y : BoundedInt }
+
+
+positionToString { x, y } =
+    String.join ""
+        [ "("
+        , String.fromInt (getBoundedInt x)
+        , ", "
+        , String.fromInt (getBoundedInt y)
+        , ")"
+        ]
 
 
 type BoundedInt

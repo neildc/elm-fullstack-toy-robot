@@ -310,20 +310,7 @@ viewDirectionCluster =
     let
         directionButton direction =
             Html.button [ Html.Events.onClick <| HandleKeyPress direction ]
-                [ Html.text <|
-                    case direction of
-                        North ->
-                            "N"
-
-                        West ->
-                            "W"
-
-                        East ->
-                            "E"
-
-                        South ->
-                            "S"
-                ]
+                [ Html.text <| String.left 1 <| directionToString direction ]
     in
     div
         [ Keyboard.Events.on Keyboard.Events.Keydown <|
@@ -453,19 +440,20 @@ viewCommandHistory commandHistory =
         commandSourceToString cs =
             case cs of
                 Keyboard dir ->
-                    "Keyboard"
+                    "Keyboard: " ++ directionToString dir
 
                 -- TODO
                 LocalText inputText command ->
-                    "Local Command: " ++ inputText ++ "/" ++ commandToString command
+                    "Local Command: " ++ inputText ++ " => " ++ commandToString command
 
                 RemoteText command ->
-                    "Remote" ++ commandToString command
+                    "Remote: " ++ commandToString command
 
         commandToString c =
             case c of
                 Place dir pos ->
-                    "Place"
+                    String.join " "
+                        [ "Place", directionToString dir, positionToString pos ]
 
                 -- TODO
                 RotateLeft ->
