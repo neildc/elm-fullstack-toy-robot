@@ -389,27 +389,32 @@ view model =
                     )
                     (List.range 1 numCells)
     in
-    div
-        [ style "display" "flex"
-        , style "flex" "row"
-        ]
-        [ div
-            [ Keyboard.Events.on Keyboard.Events.Keydown <|
-                List.map (Tuple.mapSecond HandleKeyPress)
-                    [ ( Keyboard.ArrowUp, North )
-                    , ( Keyboard.ArrowRight, East )
-                    , ( Keyboard.ArrowDown, South )
-                    , ( Keyboard.ArrowLeft, West )
+    case model.clientId of
+        Nothing ->
+            Html.h1 [] [ Html.text "Loading history..." ]
+
+        Just _ ->
+            div
+                [ style "display" "flex"
+                , style "flex" "row"
+                ]
+                [ div
+                    [ Keyboard.Events.on Keyboard.Events.Keydown <|
+                        List.map (Tuple.mapSecond HandleKeyPress)
+                            [ ( Keyboard.ArrowUp, North )
+                            , ( Keyboard.ArrowRight, East )
+                            , ( Keyboard.ArrowDown, South )
+                            , ( Keyboard.ArrowLeft, West )
+                            ]
+                    , Attr.tabindex 0
                     ]
-            , Attr.tabindex 0
-            ]
-            [ Html.div [] [ Html.map never grid ]
-            , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
-            , viewDirectionCluster
-            , viewParser model
-            ]
-        , viewCommandHistory model.commandHistory
-        ]
+                    [ Html.div [] [ Html.map never grid ]
+                    , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
+                    , viewDirectionCluster
+                    , viewParser model
+                    ]
+                , viewCommandHistory model.commandHistory
+                ]
 
 
 const_BOX_MARGIN_PX : Int
