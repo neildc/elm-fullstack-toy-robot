@@ -12,7 +12,7 @@ frontendModel old =
           , message = old.message
           , robot =
                 New.Robot
-                    { x = New.defaultBoundedInt, y = New.defaultBoundedInt }
+                    { x = New.BoundedInt 0, y = New.BoundedInt 0 }
                     New.North
           , inputText = old.inputText
           , parseError = old.parseError
