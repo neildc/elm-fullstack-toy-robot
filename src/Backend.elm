@@ -43,7 +43,7 @@ updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd
 updateFromFrontend sessionId clientId msg model =
     case msg of
         UpdateRobot command ->
-            ( { model | commandHistory = model.commandHistory ++ [ command ] }
+            ( { model | commandHistory = command :: model.commandHistory }
             , Lamdera.broadcast <| BroadcastCommand clientId command
             )
 

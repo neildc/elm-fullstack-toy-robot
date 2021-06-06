@@ -21,17 +21,20 @@ type alias Model =
     FrontendModel
 
 
+initRobot =
+    { position =
+        { x = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
+        , y = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
+        }
+    , direction = North
+    }
+
+
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
       , message = "Welcome to Lamdera! You're looking at the auto-generated base implementation. Check out src/Frontend.elm to start coding!"
-      , robot =
-            { position =
-                { x = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
-                , y = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
-                }
-            , direction = North
-            }
+      , robot = initRobot
       , inputText = ""
       , parseError = Nothing
       , currentTime = Time.millisToPosix 0
@@ -48,16 +51,7 @@ updateFromBackend msg model =
     case msg of
         InitFromBackend clientId commands ->
             ( { model
-                | robot =
-                    commands
-                        |> List.foldl
-                            updateByCommand
-                            { position =
-                                { x = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
-                                , y = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
-                                }
-                            , direction = North
-                            }
+                | robot = commands |> List.foldr updateByCommand initRobot
                 , clientId = Just clientId
                 , updatedAt = model.currentTime
                 , commandHistory = List.map RemoteText commands
@@ -78,7 +72,7 @@ updateFromBackend msg model =
                         ( { model
                             | robot = model.robot |> updateByCommand command
                             , updatedAt = model.currentTime
-                            , commandHistory = model.commandHistory ++ [ RemoteText command ]
+                            , commandHistory = RemoteText command :: model.commandHistory
                           }
                         , Cmd.none
                         )
@@ -117,7 +111,7 @@ update msg model =
             ( { model
                 | robot = model.robot |> updateByCommand command
                 , updatedAt = model.currentTime
-                , commandHistory = model.commandHistory ++ [ Keyboard direction ]
+                , commandHistory = Keyboard direction :: model.commandHistory
               }
             , Lamdera.sendToBackend <| UpdateRobot command
             )
@@ -137,7 +131,7 @@ update msg model =
                     ( { model
                         | robot = newRobot
                         , updatedAt = model.currentTime
-                        , commandHistory = model.commandHistory ++ [ LocalText model.inputText command ]
+                        , commandHistory = LocalText model.inputText command :: model.commandHistory
                       }
                     , Lamdera.sendToBackend <| UpdateRobot command
                     )
@@ -494,8 +488,7 @@ viewCommandHistory commandHistory =
         ]
         [ Html.h1 [] [ Html.text <| "HISTORY" ]
         , Html.div [ style "overflow-y" "scroll", style "max-height" "85vh" ] <|
-            List.map viewLog <|
-                List.reverse commandHistory
+            List.map viewLog commandHistory
         ]
 
 
