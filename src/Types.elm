@@ -46,7 +46,7 @@ type Command
 
 type CommandSource
     = Keyboard Direction
-    | LocalText Command
+    | LocalText String Command
     | RemoteText Command
 
 

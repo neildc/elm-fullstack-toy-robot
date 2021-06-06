@@ -137,7 +137,7 @@ update msg model =
                     ( { model
                         | robot = newRobot
                         , updatedAt = model.currentTime
-                        , commandHistory = model.commandHistory |> List.append [ LocalText command ]
+                        , commandHistory = model.commandHistory ++ [ LocalText model.inputText command ]
                       }
                     , Lamdera.sendToBackend <| UpdateRobot command
                     )
@@ -390,19 +390,24 @@ view model =
                     (List.range 1 numCells)
     in
     div
-        [ Keyboard.Events.on Keyboard.Events.Keydown <|
-            List.map (Tuple.mapSecond HandleKeyPress)
-                [ ( Keyboard.ArrowUp, North )
-                , ( Keyboard.ArrowRight, East )
-                , ( Keyboard.ArrowDown, South )
-                , ( Keyboard.ArrowLeft, West )
-                ]
-        , Attr.tabindex 0
+        [ style "display" "flex"
+        , style "flex" "row"
         ]
-        [ Html.div [] [ Html.map never grid ]
-        , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
-        , viewDirectionCluster
-        , viewParser model
+        [ div
+            [ Keyboard.Events.on Keyboard.Events.Keydown <|
+                List.map (Tuple.mapSecond HandleKeyPress)
+                    [ ( Keyboard.ArrowUp, North )
+                    , ( Keyboard.ArrowRight, East )
+                    , ( Keyboard.ArrowDown, South )
+                    , ( Keyboard.ArrowLeft, West )
+                    ]
+            , Attr.tabindex 0
+            ]
+            [ Html.div [] [ Html.map never grid ]
+            , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
+            , viewDirectionCluster
+            , viewParser model
+            ]
         , viewCommandHistory model.commandHistory
         ]
 
@@ -440,8 +445,8 @@ viewCommandHistory commandHistory =
                     "Keyboard"
 
                 -- TODO
-                LocalText command ->
-                    "Localtext: " ++ commandToString command
+                LocalText inputText command ->
+                    "Localtext: " ++ inputText ++ "/" ++ commandToString command
 
                 RemoteText command ->
                     "Remotetext: " ++ commandToString command
@@ -467,11 +472,11 @@ viewCommandHistory commandHistory =
                 ]
     in
     Html.div
-        [ style "height" "250px"
-        , style "max-height" "250px"
+        [ style "height" "100vh"
+        , style "max-height" "100vh"
         , style "overflow-y" "scroll"
         ]
-        [ Html.text <| "History"
+        [ Html.h1 [] [ Html.text <| "HISTORY" ]
         , Html.div [ style "max-height" "200px" ] <|
             List.map viewLog <|
                 List.reverse commandHistory
