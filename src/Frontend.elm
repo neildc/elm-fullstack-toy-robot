@@ -340,6 +340,8 @@ viewDirectionCluster =
                 , ( Keyboard.ArrowLeft, West )
                 ]
         , Attr.tabindex 0
+        , style "text-align" "center"
+        , style "width" "200px"
         ]
         [ directionButton North
         , div []
@@ -397,6 +399,7 @@ view model =
             div
                 [ style "display" "flex"
                 , style "flex" "row"
+                , style "margin" "20px"
                 ]
                 [ div
                     [ Keyboard.Events.on Keyboard.Events.Keydown <|
@@ -413,7 +416,8 @@ view model =
                     , viewDirectionCluster
                     , viewParser model
                     ]
-                , viewCommandHistory model.commandHistory
+                , div [ style "padding-left" "30px" ]
+                    [ viewCommandHistory model.commandHistory ]
                 ]
 
 
@@ -426,6 +430,14 @@ viewParser : Model -> Html FrontendMsg
 viewParser model =
     Html.div []
         [ Html.text <| ""
+        , Html.h3 [] [ Html.text "Commands" ]
+        , Html.div [] <|
+            List.map (\t -> Html.p [] [ Html.text t ])
+                [ "PLACE X,Y,[NORTH,EAST,SOUTH,WEST]"
+                , "MOVE"
+                , "LEFT"
+                , "RIGHT"
+                ]
         , Html.div []
             [ Html.input
                 [ Html.Events.onInput UpdateInputText
@@ -451,10 +463,10 @@ viewCommandHistory commandHistory =
 
                 -- TODO
                 LocalText inputText command ->
-                    "Localtext: " ++ inputText ++ "/" ++ commandToString command
+                    "Local Command: " ++ inputText ++ "/" ++ commandToString command
 
                 RemoteText command ->
-                    "Remotetext: " ++ commandToString command
+                    "Remote" ++ commandToString command
 
         commandToString c =
             case c of
@@ -477,12 +489,11 @@ viewCommandHistory commandHistory =
                 ]
     in
     Html.div
-        [ style "height" "100vh"
-        , style "max-height" "100vh"
-        , style "overflow-y" "scroll"
+        [ style "height" "90vh"
+        , style "max-height" "90vh"
         ]
         [ Html.h1 [] [ Html.text <| "HISTORY" ]
-        , Html.div [ style "max-height" "200px" ] <|
+        , Html.div [ style "overflow-y" "scroll", style "max-height" "85vh" ] <|
             List.map viewLog <|
                 List.reverse commandHistory
         ]
