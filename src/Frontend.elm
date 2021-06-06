@@ -475,6 +475,7 @@ viewCommandHistory commandHistory =
         , style "max-height" "90vh"
         ]
         [ Html.h1 [] [ Html.text <| "HISTORY" ]
+        , Html.h3 [] [ Html.text <| "Count: " ++ String.fromInt (List.length commandHistory) ]
         , Html.div [ style "overflow-y" "scroll", style "max-height" "85vh" ] <|
             List.map viewLog commandHistory
         ]
