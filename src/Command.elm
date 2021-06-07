@@ -1,17 +1,36 @@
 module Command exposing
-    ( ParseError
+    ( Command(..)
+    , ParseError
     , parse
     , parseErrorToString
+    , toString
     )
 
-import Types
-    exposing
-        ( BoundedInt
-        , Command(..)
-        , Direction(..)
-        , Position
-        , makeBoundedInt
-        )
+import Types.Direction exposing (Direction(..))
+import Types.Position exposing (BoundedInt, Position, makeBoundedInt)
+
+
+type Command
+    = Place Direction Position
+    | RotateLeft
+    | RotateRight
+    | Move
+
+
+toString c =
+    case c of
+        Place dir pos ->
+            String.join " "
+                [ "Place", Types.Direction.toString dir, Types.Position.toString pos ]
+
+        RotateLeft ->
+            "Rotate Left"
+
+        RotateRight ->
+            "Rotate Right"
+
+        Move ->
+            "Move"
 
 
 type ParseError
@@ -35,20 +54,15 @@ parse input =
             Result.Ok RotateRight
 
         _ ->
-            let
-                finishIt : BoundedInt -> BoundedInt -> Direction -> Command
-                finishIt x y dir =
-                    Place dir { x = x, y = y }
-            in
             getPlaceArgs input
                 |> Result.fromMaybe UnknownCommand
                 |> Result.andThen (splitIntoThree >> Result.fromMaybe CantSplitIntoThree)
                 |> Result.andThen
                     (\( xStr, yStr, dirStr ) ->
                         Result.map3
-                            finishIt
-                            (xStr |> stringToIntThenMakeBoundedInt |> Result.fromMaybe PlaceXInvalid)
-                            (yStr |> stringToIntThenMakeBoundedInt |> Result.fromMaybe PlaceYInvalid)
+                            (\validX validY validDir -> Place validDir { x = validX, y = validY })
+                            (xStr |> stringToBoundedInt |> Result.fromMaybe PlaceXInvalid)
+                            (yStr |> stringToBoundedInt |> Result.fromMaybe PlaceYInvalid)
                             (parseDirection dirStr |> Result.fromMaybe PlaceDirectionInvalid)
                     )
 
@@ -63,8 +77,8 @@ getPlaceArgs input =
             Nothing
 
 
-stringToIntThenMakeBoundedInt : String -> Maybe BoundedInt
-stringToIntThenMakeBoundedInt string =
+stringToBoundedInt : String -> Maybe BoundedInt
+stringToBoundedInt string =
     string |> String.toInt |> Maybe.andThen makeBoundedInt
 
 

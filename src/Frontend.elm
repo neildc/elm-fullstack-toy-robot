@@ -2,7 +2,7 @@ module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Command
+import Command exposing (Command(..))
 import Element exposing (Element)
 import Element.Background as Background
 import Element.Border as Border
@@ -14,6 +14,15 @@ import Keyboard.Events
 import Lamdera
 import Time
 import Types exposing (..)
+import Types.Direction exposing (Direction(..))
+import Types.Position
+    exposing
+        ( BoundedInt
+        , Position
+        , defaultBoundedInt
+        , getBoundedInt
+        , makeBoundedInt
+        )
 import Url
 
 
@@ -23,8 +32,8 @@ type alias Model =
 
 initRobot =
     { position =
-        { x = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
-        , y = makeBoundedInt 2 |> Maybe.withDefault Types.defaultBoundedInt
+        { x = makeBoundedInt 2 |> Maybe.withDefault defaultBoundedInt
+        , y = makeBoundedInt 2 |> Maybe.withDefault defaultBoundedInt
         }
     , direction = North
     }
@@ -226,7 +235,7 @@ viewRobot : Robot -> Html Never
 viewRobot { direction, position } =
     let
         numberOfBoxesToShiftBy curr =
-            negate Types.const_MAX_XorY + curr
+            negate Types.Position.const_MAX_XorY + curr
 
         -- Now since I wanted to animate the movement of the bot...
         --
@@ -310,7 +319,7 @@ viewDirectionCluster =
     let
         directionButton direction =
             Html.button [ Html.Events.onClick <| HandleKeyPress direction ]
-                [ Html.text <| String.left 1 <| directionToString direction ]
+                [ Html.text <| String.left 1 <| Types.Direction.toString direction ]
     in
     div
         [ Keyboard.Events.on Keyboard.Events.Keydown <|
@@ -351,7 +360,7 @@ view model =
                 ]
 
         numCells =
-            (Types.const_MAX_XorY + 1) ^ 2
+            (Types.Position.const_MAX_XorY + 1) ^ 2
 
         grid =
             div
@@ -442,11 +451,11 @@ viewCommandHistory commandHistory =
         commandSourceToString cs =
             case cs of
                 Keyboard dir ->
-                    "Keyboard: " ++ directionToString dir
+                    "Keyboard: " ++ Types.Direction.toString dir
 
                 -- TODO
                 LocalText inputText command ->
-                    "Local Command: " ++ inputText ++ " => " ++ commandToString command
+                    "Local Command: " ++ inputText ++ " => " ++ Command.toString command
 
                 RemoteText command ->
                     "Remote: " ++ commandToString command
@@ -455,7 +464,7 @@ viewCommandHistory commandHistory =
             case c of
                 Place dir pos ->
                     String.join " "
-                        [ "Place", directionToString dir, positionToString pos ]
+                        [ "Place", Types.Direction.toString dir, Types.Position.toString pos ]
 
                 -- TODO
                 RotateLeft ->
@@ -534,9 +543,9 @@ viewSimple model =
                                                 && (row == getBoundedInt model.robot.position.y)
                                         }
                                 )
-                                (List.range 0 <| Types.const_MAX_XorY)
+                                (List.range 0 <| Types.Position.const_MAX_XorY)
                     )
-                    (List.range 0 <| Types.const_MAX_XorY)
+                    (List.range 0 <| Types.Position.const_MAX_XorY)
     in
     div
         [ Keyboard.Events.on Keyboard.Events.Keydown <|
