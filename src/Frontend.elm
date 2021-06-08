@@ -3,12 +3,11 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import Command exposing (Command(..))
-import Element exposing (Element)
+import Element as E exposing (Element)
 import Element.Background as Background
 import Element.Border as Border
-import Html exposing (Html, div)
-import Html.Attributes as Attr exposing (class, src, style)
-import Html.Events
+import Element.Input as Input
+import Html.Attributes as Attr
 import Keyboard
 import Keyboard.Events
 import Lamdera
@@ -212,266 +211,9 @@ updateByCommand cmd ({ position, direction } as currentRobot) =
             }
 
 
-viewRobot : Robot -> Html Never
-viewRobot { direction, position } =
-    let
-        numberOfBoxesToShiftBy curr =
-            negate Types.Position.const_MAX_XorY + curr
-
-        -- Now since I wanted to animate the movement of the bot...
-        --
-        -- Instead of simply conditionally rendering the bot into the box that
-        -- corresponds to the currentPosition, we render the bot in the same box every cycle,
-        -- then we translate it over based on the currentPosition
-        --
-        -- We have to calculate the displacment for the owl since
-        -- the size of the boxes is dynamic to allow the page to responsive
-        -- and the gridSize is also configurable.
-        --
-        -- Luckily CSS transform's allow you to define the displacement as a percentage of what
-        -- you are moving, which works out well since we render the bots <img> as width/height=100%
-        -- and it's parent is simply one of those responsive boxes.
-        --
-        -- There is the caveat that this percentage doesn't include the margin, so we must
-        -- do an additional translation for that.
-        -- Which is a lot simpler since we just hardcode the value in const_BOX_MARGIN_PX
-        boxesDisplacement curr =
-            let
-                toPercentage d =
-                    d
-                        -- Margins around the box will be a percentage of the size of the box
-                        * 100
-                        |> String.fromInt
-                        |> (\s -> s ++ "%")
-            in
-            numberOfBoxesToShiftBy curr |> toPercentage
-
-        marginsDisplacement curr =
-            numberOfBoxesToShiftBy curr
-                * const_BOX_MARGIN_PX
-                * 2
-                |> String.fromInt
-                |> (\s -> s ++ "px")
-
-        rotationAngle =
-            case direction of
-                North ->
-                    0
-
-                East ->
-                    90
-
-                West ->
-                    -90
-
-                South ->
-                    180
-
-        ( x, y ) =
-            ( getBoundedInt position.x, getBoundedInt position.y )
-    in
-    Html.img
-        [ src "rocket.png"
-        , style "width" "100%"
-        , style "height" "100%"
-        , style "transform" <|
-            String.join " "
-                [ "translateX(" ++ boxesDisplacement x ++ ")"
-                , "translateX(" ++ marginsDisplacement x ++ ")"
-                , "translateY(" ++ boxesDisplacement y ++ ")"
-                , "translateY(" ++ marginsDisplacement y ++ ")"
-
-                -- Make sure that the rotation is applied first
-                --
-                -- CSS transform  applies these in reverse order of their listing
-                -- if you rotate after you translate then the center/origin of the plane
-                -- is no longer where the robot will be.
-                --
-                -- This is probably why you lost your car keys...
-                , "rotate(" ++ String.fromInt rotationAngle ++ "deg)"
-                ]
-        , style "transition" "transform 0.5s" -- At least CSS does all the animating for free
-        ]
-        []
-
-
-viewDirectionCluster : Html FrontendMsg
-viewDirectionCluster =
-    let
-        directionButton direction =
-            Html.button [ Html.Events.onClick <| HandleKeyPress direction ]
-                [ Html.text <| String.left 1 <| Types.Direction.toString direction ]
-    in
-    div
-        [ Keyboard.Events.on Keyboard.Events.Keydown <|
-            List.map (Tuple.mapSecond HandleKeyPress)
-                [ ( Keyboard.ArrowUp, North )
-                , ( Keyboard.ArrowRight, East )
-                , ( Keyboard.ArrowDown, South )
-                , ( Keyboard.ArrowLeft, West )
-                ]
-        , Attr.tabindex 0
-        , style "text-align" "center"
-        , style "width" "200px"
-        ]
-        [ directionButton North
-        , div []
-            [ directionButton West
-            , Html.text "+"
-            , directionButton East
-            ]
-        , directionButton South
-        ]
-
-
-view : Model -> Html FrontendMsg
-view model =
-    let
-        box { withRobot } =
-            Html.div
-                [ style "background" "lightgray"
-                , style "height" "6vw"
-                , style "width" "6vw"
-                ]
-                [ if withRobot then
-                    viewRobot model.robot
-
-                  else
-                    Html.text ""
-                ]
-
-        numCells =
-            (Types.Position.const_MAX_XorY + 1) ^ 2
-
-        grid =
-            div
-                [ style "display" "grid"
-                , style "grid-template-columns" "repeat(5, 6vw)"
-                , style "grid-gap" "10px"
-                ]
-                (List.map
-                    (\row ->
-                        box
-                            { withRobot =
-                                -- Render it last so it can be rendered over
-                                -- all the other boxes/div nodes
-                                row == numCells
-                            }
-                    )
-                    (List.range 1 numCells)
-                )
-    in
-    case model.clientId of
-        Nothing ->
-            Html.h1 [] [ Html.text "Loading history..." ]
-
-        Just _ ->
-            div
-                [ style "display" "flex"
-                , style "flex" "row"
-                , style "margin" "20px"
-                ]
-                [ div
-                    [ Attr.tabindex 0
-                    , Keyboard.Events.on Keyboard.Events.Keydown <|
-                        List.map (Tuple.mapSecond HandleKeyPress)
-                            [ ( Keyboard.ArrowUp, North )
-                            , ( Keyboard.ArrowRight, East )
-                            , ( Keyboard.ArrowDown, South )
-                            , ( Keyboard.ArrowLeft, West )
-                            ]
-                    ]
-                    [ Html.div [] [ Html.map never grid ]
-                    , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
-                    , viewDirectionCluster
-                    , viewParser model
-                    ]
-                , div [ style "padding-left" "30px" ]
-                    [ viewCommandHistory model.commandHistory ]
-                ]
-
-
 const_BOX_MARGIN_PX : Int
 const_BOX_MARGIN_PX =
     5
-
-
-viewParser : Model -> Html FrontendMsg
-viewParser model =
-    Html.div []
-        [ Html.h3 [] [ Html.text "Commands" ]
-        , Html.div [] <|
-            List.map (\t -> Html.p [] [ Html.text t ])
-                [ "PLACE X,Y,[NORTH,EAST,SOUTH,WEST]"
-                , "MOVE"
-                , "LEFT"
-                , "RIGHT"
-                ]
-        , div [ style "display" "flex", style "flex" "row" ]
-            [ Html.form [ Html.Events.onSubmit ParseAndExecuteCommand ]
-                [ Html.input
-                    [ Html.Events.onInput UpdateInputText
-                    ]
-                    []
-                ]
-            , Html.button
-                [ Html.Events.onClick ParseAndExecuteCommand ]
-                [ Html.text "GO" ]
-            ]
-        , Html.text <|
-            case model.inputText |> Command.parse of
-                Result.Ok command ->
-                    "Ok: " ++ Command.toString command
-
-                Result.Err err ->
-                    "Err: " ++ Command.parseErrorToString err
-        ]
-
-
-viewCommandHistory : List CommandSource -> Html FrontendMsg
-viewCommandHistory commandHistory =
-    let
-        commandSourceToString cs =
-            case cs of
-                Keyboard dir ->
-                    "Keyboard: " ++ Types.Direction.toString dir
-
-                -- TODO
-                LocalText inputText command ->
-                    "Local Command: " ++ inputText ++ " => " ++ Command.toString command
-
-                RemoteText command ->
-                    "Remote: " ++ commandToString command
-
-        commandToString c =
-            case c of
-                Place dir pos ->
-                    String.join " "
-                        [ "Place", Types.Direction.toString dir, Types.Position.toString pos ]
-
-                RotateLeft ->
-                    "Rotate Left"
-
-                RotateRight ->
-                    "Rotate Right"
-
-                Move ->
-                    "Move"
-
-        viewLog c =
-            Html.p []
-                [ Html.text <| commandSourceToString c
-                ]
-    in
-    Html.div
-        [ style "height" "90vh"
-        , style "max-height" "90vh"
-        ]
-        [ Html.h1 [] [ Html.text <| "HISTORY" ]
-        , Html.h3 [] [ Html.text <| "Count: " ++ String.fromInt (List.length commandHistory) ]
-        , Html.div [ style "overflow-y" "scroll", style "max-height" "85vh" ] <|
-            List.map viewLog commandHistory
-        ]
 
 
 app =
@@ -482,7 +224,7 @@ app =
         , update = update
         , updateFromBackend = updateFromBackend
         , subscriptions = subscriptions
-        , view = view >> (\v -> { title = "", body = [ v ] })
+        , view = viewSimple >> (\v -> { title = "", body = [ v ] })
         }
 
 
@@ -491,44 +233,80 @@ subscriptions model =
     Sub.none
 
 
-viewSimple : Model -> Html FrontendMsg
+viewParser model =
+    E.column [ E.spacing 15 ]
+        [ E.el [] <| E.text "Commands"
+        , E.textColumn [] <|
+            List.map (\t -> E.paragraph [] [ E.text <| "- " ++ t ])
+                [ "PLACE X,Y,[NORTH,EAST,SOUTH,WEST]"
+                , "MOVE"
+                , "LEFT"
+                , "RIGHT"
+                ]
+        , E.row []
+            [ Input.text []
+                { onChange = UpdateInputText
+                , text = model.inputText
+                , placeholder = Nothing
+                , label = Input.labelAbove [] <| E.text "Enter a Command"
+                }
+            , Input.button []
+                { onPress = Just ParseAndExecuteCommand
+                , label = E.text "GO"
+                }
+            ]
+        , E.text <|
+            case model.inputText |> Command.parse of
+                Result.Ok command ->
+                    "Ok: " ++ Command.toString command
+
+                Result.Err err ->
+                    "Err: " ++ Command.parseErrorToString err
+        ]
+
+
 viewSimple model =
     let
         viewCell { withRobot } =
-            Element.el
-                [ Element.width <| Element.px 100
-                , Element.height <| Element.px 100
-                , Element.centerX
-                , Element.centerY
-                , Background.color <| Element.rgb 100 1 0
-                , Border.color <| Element.rgb 255 255 255
+            E.el
+                [ E.width <| E.px 100
+                , E.height <| E.px 100
+                , E.centerX
+                , E.centerY
+                , Background.color <| E.rgb 100 1 0
+                , Border.color <| E.rgb 0 0 0
                 , Border.solid
+                , Border.rounded 20
+                , Border.width 5
                 ]
-                (Element.text <|
-                    if withRobot == False then
-                        ""
+                (E.el
+                    [ E.centerX, E.centerY ]
+                    (E.text <|
+                        if withRobot == False then
+                            ""
 
-                    else
-                        case model.robot.direction of
-                            North ->
-                                "^"
+                        else
+                            case model.robot.direction of
+                                North ->
+                                    "^"
 
-                            South ->
-                                "v"
+                                South ->
+                                    "v"
 
-                            East ->
-                                ">"
+                                East ->
+                                    ">"
 
-                            West ->
-                                "<"
+                                West ->
+                                    "<"
+                    )
                 )
 
         mapRange f =
             List.map f (List.range 0 <| Types.Position.const_MAX_XorY)
 
         viewRow rowIdx =
-            Element.row
-                [ Element.spacing 10, Element.centerY ]
+            E.row
+                [ E.spacing 10, E.centerX, E.centerY ]
                 (mapRange <|
                     \colIdx ->
                         viewCell
@@ -539,23 +317,44 @@ viewSimple model =
                 )
 
         viewGrid =
-            Element.column
-                [ Element.spacing 10, Element.centerY ]
+            E.column
+                [ E.spacing 10, E.centerX, E.centerY ]
                 (mapRange viewRow)
     in
-    div
-        [ Keyboard.Events.on Keyboard.Events.Keydown <|
-            List.map (Tuple.mapSecond HandleKeyPress)
-                [ ( Keyboard.ArrowUp, North )
-                , ( Keyboard.ArrowRight, East )
-                , ( Keyboard.ArrowDown, South )
-                , ( Keyboard.ArrowLeft, West )
+    E.layout
+        [ E.centerX
+        , E.centerY
+        , E.htmlAttribute <|
+            Keyboard.Events.on Keyboard.Events.Keydown <|
+                List.map (Tuple.mapSecond HandleKeyPress)
+                    [ ( Keyboard.ArrowUp, North )
+                    , ( Keyboard.ArrowRight, East )
+                    , ( Keyboard.ArrowDown, South )
+                    , ( Keyboard.ArrowLeft, West )
+                    ]
+        , E.htmlAttribute <| Attr.tabindex 0
+        ]
+        (E.column [ E.centerX, E.centerY, E.spacing 30 ]
+            [ E.row [ E.centerX, E.centerY, E.spacing 30 ]
+                [ E.map never viewGrid
+                , E.textColumn [] <|
+                    List.map
+                        (\c -> E.paragraph [] [ E.text <| commandSourceToString c ])
+                        (List.take 20 model.commandHistory)
                 ]
-        , Attr.tabindex 0
-        ]
-        [ Element.layout [ Element.centerX, Element.centerY ] <|
-            Element.map never viewGrid
-        , Html.text "Use the following buttons to rotate and move the owl, alternatively use the arrow keys."
-        , viewDirectionCluster
-        , viewParser model
-        ]
+            , viewParser model
+            ]
+        )
+
+
+commandSourceToString cs =
+    case cs of
+        Keyboard dir ->
+            "Keyboard: " ++ Types.Direction.toString dir
+
+        -- TODO
+        LocalText inputText command ->
+            "Local Command: " ++ inputText ++ " => " ++ Command.toString command
+
+        RemoteText command ->
+            "Remote: " ++ Command.toString command
