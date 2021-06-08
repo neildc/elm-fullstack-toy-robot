@@ -117,7 +117,7 @@ parseErrorToString err =
             "Unknown Command"
 
         CantSplitIntoThree ->
-            "Can't split"
+            "Can't split place args"
 
         PlaceDirectionInvalid ->
             "Place direction is invalid"
