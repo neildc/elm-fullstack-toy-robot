@@ -12,29 +12,10 @@ module Types exposing
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Command exposing (Command)
-import Lamdera exposing (ClientId, SessionId)
 import Time
 import Types.Direction exposing (Direction)
 import Types.Position exposing (Position)
 import Url exposing (Url)
-
-
-type alias FrontendModel =
-    { robot : Robot
-    , inputText : String
-    , commandHistory : List CommandSource
-    , clientId : Maybe ClientId
-    }
-
-
-type CommandSource
-    = Keyboard Direction
-    | LocalText String Command
-    | RemoteText Command
-
-
-type alias Robot =
-    { position : Position, direction : Direction }
 
 
 type alias BackendModel =

@@ -7,7 +7,6 @@ import Html.Attributes as Attr exposing (class, src, style)
 import Html.Events
 import Keyboard
 import Keyboard.Events
-import Types exposing (..)
 import Types.Direction exposing (Direction(..))
 import Types.Position
     exposing
@@ -21,7 +20,19 @@ import Url
 
 
 type alias Model =
-    FrontendModel
+    { robot : Robot
+    , inputText : String
+    }
+
+
+type CommandSource
+    = Keyboard Direction
+    | LocalText String Command
+    | RemoteText Command
+
+
+type alias Robot =
+    { position : Position, direction : Direction }
 
 
 initRobot =
@@ -37,26 +48,17 @@ init : Model
 init =
     { robot = initRobot
     , inputText = ""
-    , clientId = Nothing
-    , commandHistory = []
     }
+
+
+type FrontendMsg
+    = UpdateInputText String
+    | ParseAndExecuteCommand
+    | HandleKeyPress Direction
 
 
 update msg model =
     case msg of
-        UrlClicked urlRequest ->
-            case urlRequest of
-                Internal url ->
-                    (model
-                     -- , Cmd.batch [ Nav.pushUrl model.key (Url.toString url) ]
-                    )
-
-                External url ->
-                    model
-
-        UrlChanged url ->
-            model
-
         HandleKeyPress direction ->
             let
                 command =
@@ -66,10 +68,7 @@ update msg model =
                     else
                         Place direction model.robot.position
             in
-            { model
-                | robot = model.robot |> updateByCommand command
-                , commandHistory = Keyboard direction :: model.commandHistory
-            }
+            { model | robot = model.robot |> updateByCommand command }
 
         UpdateInputText text ->
             { model | inputText = text }
@@ -81,10 +80,7 @@ update msg model =
                         newRobot =
                             updateByCommand command model.robot
                     in
-                    { model
-                        | robot = newRobot
-                        , commandHistory = LocalText model.inputText command :: model.commandHistory
-                    }
+                    { model | robot = newRobot }
 
                 Result.Err err ->
                     model
@@ -334,8 +330,6 @@ view model =
             , viewDirectionCluster
             , viewParser model
             ]
-        , div [ style "padding-left" "30px" ]
-            [ viewCommandHistory model.commandHistory ]
         ]
 
 
@@ -373,37 +367,6 @@ viewParser model =
 
                 Result.Err err ->
                     "Err: " ++ Command.parseErrorToString err
-        ]
-
-
-viewCommandHistory : List CommandSource -> Html FrontendMsg
-viewCommandHistory commandHistory =
-    let
-        commandSourceToString cs =
-            case cs of
-                Keyboard dir ->
-                    "Keyboard: " ++ Types.Direction.toString dir
-
-                -- TODO
-                LocalText inputText command ->
-                    "Local Command: " ++ inputText ++ " => " ++ Command.toString command
-
-                RemoteText command ->
-                    "Remote: " ++ Command.toString command
-
-        viewLog c =
-            Html.p []
-                [ Html.text <| commandSourceToString c
-                ]
-    in
-    Html.div
-        [ style "height" "90vh"
-        , style "max-height" "90vh"
-        ]
-        [ Html.h1 [] [ Html.text <| "HISTORY" ]
-        , Html.h3 [] [ Html.text <| "Count: " ++ String.fromInt (List.length commandHistory) ]
-        , Html.div [ style "overflow-y" "scroll", style "max-height" "85vh" ] <|
-            List.map viewLog commandHistory
         ]
 
 
