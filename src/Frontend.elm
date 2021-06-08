@@ -1,14 +1,12 @@
 module Frontend exposing (..)
 
 import Browser exposing (UrlRequest(..))
-import Browser.Navigation as Nav
 import Command exposing (Command(..))
 import Html exposing (Html, div)
 import Html.Attributes as Attr exposing (class, src, style)
 import Html.Events
 import Keyboard
 import Keyboard.Events
-import Lamdera
 import Types exposing (..)
 import Types.Direction exposing (Direction(..))
 import Types.Position
@@ -35,65 +33,29 @@ initRobot =
     }
 
 
-init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
-init url key =
-    ( { robot = initRobot
-      , inputText = ""
-      , clientId = Nothing
-      , commandHistory = []
-      }
-    , Cmd.none
-    )
+init : Model
+init =
+    { robot = initRobot
+    , inputText = ""
+    , clientId = Nothing
+    , commandHistory = []
+    }
 
 
-updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
-updateFromBackend msg model =
-    case msg of
-        InitFromBackend clientId commands ->
-            ( { model
-                | robot = commands |> List.foldr updateByCommand initRobot
-                , clientId = Just clientId
-                , commandHistory = List.map RemoteText commands
-              }
-            , Cmd.none
-            )
-
-        BroadcastCommand clientId command ->
-            case model.clientId of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just c ->
-                    if c == clientId then
-                        ( model, Cmd.none )
-
-                    else
-                        ( { model
-                            | robot = model.robot |> updateByCommand command
-                            , commandHistory = RemoteText command :: model.commandHistory
-                          }
-                        , Cmd.none
-                        )
-
-
-update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
         UrlClicked urlRequest ->
             case urlRequest of
                 Internal url ->
-                    ( model
-                      -- , Cmd.batch [ Nav.pushUrl model.key (Url.toString url) ]
-                    , Cmd.none
+                    (model
+                     -- , Cmd.batch [ Nav.pushUrl model.key (Url.toString url) ]
                     )
 
                 External url ->
-                    ( model
-                    , Nav.load url
-                    )
+                    model
 
         UrlChanged url ->
-            ( model, Cmd.none )
+            model
 
         HandleKeyPress direction ->
             let
@@ -104,17 +66,13 @@ update msg model =
                     else
                         Place direction model.robot.position
             in
-            ( { model
+            { model
                 | robot = model.robot |> updateByCommand command
                 , commandHistory = Keyboard direction :: model.commandHistory
-              }
-            , Lamdera.sendToBackend <| UpdateRobot command
-            )
+            }
 
         UpdateInputText text ->
-            ( { model | inputText = text }
-            , Cmd.none
-            )
+            { model | inputText = text }
 
         ParseAndExecuteCommand ->
             case model.inputText |> Command.parse of
@@ -123,15 +81,13 @@ update msg model =
                         newRobot =
                             updateByCommand command model.robot
                     in
-                    ( { model
+                    { model
                         | robot = newRobot
                         , commandHistory = LocalText model.inputText command :: model.commandHistory
-                      }
-                    , Lamdera.sendToBackend <| UpdateRobot command
-                    )
+                    }
 
                 Result.Err err ->
-                    ( model, Cmd.none )
+                    model
 
 
 move : Robot -> Robot
@@ -358,34 +314,29 @@ view model =
                     (List.range 1 numCells)
                 )
     in
-    case model.clientId of
-        Nothing ->
-            Html.h1 [] [ Html.text "Loading history..." ]
-
-        Just _ ->
-            div
-                [ style "display" "flex"
-                , style "flex" "row"
-                , style "margin" "20px"
-                ]
-                [ div
-                    [ Attr.tabindex 0
-                    , Keyboard.Events.on Keyboard.Events.Keydown <|
-                        List.map (Tuple.mapSecond HandleKeyPress)
-                            [ ( Keyboard.ArrowUp, North )
-                            , ( Keyboard.ArrowRight, East )
-                            , ( Keyboard.ArrowDown, South )
-                            , ( Keyboard.ArrowLeft, West )
-                            ]
+    div
+        [ style "display" "flex"
+        , style "flex" "row"
+        , style "margin" "20px"
+        ]
+        [ div
+            [ Attr.tabindex 0
+            , Keyboard.Events.on Keyboard.Events.Keydown <|
+                List.map (Tuple.mapSecond HandleKeyPress)
+                    [ ( Keyboard.ArrowUp, North )
+                    , ( Keyboard.ArrowRight, East )
+                    , ( Keyboard.ArrowDown, South )
+                    , ( Keyboard.ArrowLeft, West )
                     ]
-                    [ Html.div [] [ Html.map never grid ]
-                    , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
-                    , viewDirectionCluster
-                    , viewParser model
-                    ]
-                , div [ style "padding-left" "30px" ]
-                    [ viewCommandHistory model.commandHistory ]
-                ]
+            ]
+            [ Html.div [] [ Html.map never grid ]
+            , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
+            , viewDirectionCluster
+            , viewParser model
+            ]
+        , div [ style "padding-left" "30px" ]
+            [ viewCommandHistory model.commandHistory ]
+        ]
 
 
 const_BOX_MARGIN_PX : Int
@@ -456,18 +407,9 @@ viewCommandHistory commandHistory =
         ]
 
 
-app =
-    Lamdera.frontend
+main =
+    Browser.sandbox
         { init = init
-        , onUrlRequest = UrlClicked
-        , onUrlChange = UrlChanged
         , update = update
-        , updateFromBackend = updateFromBackend
-        , subscriptions = subscriptions
-        , view = view >> (\v -> { title = "", body = [ v ] })
+        , view = view
         }
-
-
-subscriptions : Model -> Sub FrontendMsg
-subscriptions model =
-    Sub.none
