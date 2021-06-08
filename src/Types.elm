@@ -20,13 +20,8 @@ import Url exposing (Url)
 
 
 type alias FrontendModel =
-    { key : Key
-    , message : String
-    , robot : Robot
+    { robot : Robot
     , inputText : String
-    , parseError : Maybe String
-    , currentTime : Time.Posix
-    , updatedAt : Time.Posix
     , commandHistory : List CommandSource
     , clientId : Maybe ClientId
     }
@@ -53,7 +48,6 @@ type FrontendMsg
     | UpdateInputText String
     | ParseAndExecuteCommand
     | HandleKeyPress Direction
-    | Tick Time.Posix
 
 
 type ToBackend

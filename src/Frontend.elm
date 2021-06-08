@@ -12,7 +12,6 @@ import Html.Events
 import Keyboard
 import Keyboard.Events
 import Lamdera
-import Time
 import Types exposing (..)
 import Types.Direction exposing (Direction(..))
 import Types.Position
@@ -41,13 +40,8 @@ initRobot =
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
-    ( { key = key
-      , message = "Welcome to Lamdera! You're looking at the auto-generated base implementation. Check out src/Frontend.elm to start coding!"
-      , robot = initRobot
+    ( { robot = initRobot
       , inputText = ""
-      , parseError = Nothing
-      , currentTime = Time.millisToPosix 0
-      , updatedAt = Time.millisToPosix 0
       , clientId = Nothing
       , commandHistory = []
       }
@@ -62,7 +56,6 @@ updateFromBackend msg model =
             ( { model
                 | robot = commands |> List.foldr updateByCommand initRobot
                 , clientId = Just clientId
-                , updatedAt = model.currentTime
                 , commandHistory = List.map RemoteText commands
               }
             , Cmd.none
@@ -80,7 +73,6 @@ updateFromBackend msg model =
                     else
                         ( { model
                             | robot = model.robot |> updateByCommand command
-                            , updatedAt = model.currentTime
                             , commandHistory = RemoteText command :: model.commandHistory
                           }
                         , Cmd.none
@@ -90,14 +82,12 @@ updateFromBackend msg model =
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
-        Tick time ->
-            ( { model | currentTime = time }, Cmd.none )
-
         UrlClicked urlRequest ->
             case urlRequest of
                 Internal url ->
                     ( model
-                    , Cmd.batch [ Nav.pushUrl model.key (Url.toString url) ]
+                      -- , Cmd.batch [ Nav.pushUrl model.key (Url.toString url) ]
+                    , Cmd.none
                     )
 
                 External url ->
@@ -119,14 +109,13 @@ update msg model =
             in
             ( { model
                 | robot = model.robot |> updateByCommand command
-                , updatedAt = model.currentTime
                 , commandHistory = Keyboard direction :: model.commandHistory
               }
             , Lamdera.sendToBackend <| UpdateRobot command
             )
 
         UpdateInputText text ->
-            ( { model | inputText = text, parseError = Nothing }
+            ( { model | inputText = text }
             , Cmd.none
             )
 
@@ -139,21 +128,13 @@ update msg model =
                     in
                     ( { model
                         | robot = newRobot
-                        , updatedAt = model.currentTime
                         , commandHistory = LocalText model.inputText command :: model.commandHistory
                       }
                     , Lamdera.sendToBackend <| UpdateRobot command
                     )
 
                 Result.Err err ->
-                    ( { model | parseError = Just <| Command.parseErrorToString err }
-                    , Cmd.none
-                    )
-
-
-
--- else
---     ( model, Cmd.none )
+                    ( model, Cmd.none )
 
 
 move : Robot -> Robot
@@ -349,8 +330,8 @@ view model =
         box { withRobot } =
             Html.div
                 [ style "background" "lightgray"
-                , style "height" "100px"
-                , style "width" "100px"
+                , style "height" "6vw"
+                , style "width" "6vw"
                 ]
                 [ if withRobot then
                     viewRobot model.robot
@@ -365,21 +346,20 @@ view model =
         grid =
             div
                 [ style "display" "grid"
-                , style "grid-template-columns" "repeat(5, 100px)"
+                , style "grid-template-columns" "repeat(5, 6vw)"
                 , style "grid-gap" "10px"
                 ]
-            <|
-                List.map
+                (List.map
                     (\row ->
                         box
                             { withRobot =
                                 -- Render it last so it can be rendered over
                                 -- all the other boxes/div nodes
-                                -- (col == 4) &&
                                 row == numCells
                             }
                     )
                     (List.range 1 numCells)
+                )
     in
     case model.clientId of
         Nothing ->
@@ -392,14 +372,14 @@ view model =
                 , style "margin" "20px"
                 ]
                 [ div
-                    [ Keyboard.Events.on Keyboard.Events.Keydown <|
+                    [ Attr.tabindex 0
+                    , Keyboard.Events.on Keyboard.Events.Keydown <|
                         List.map (Tuple.mapSecond HandleKeyPress)
                             [ ( Keyboard.ArrowUp, North )
                             , ( Keyboard.ArrowRight, East )
                             , ( Keyboard.ArrowDown, South )
                             , ( Keyboard.ArrowLeft, West )
                             ]
-                    , Attr.tabindex 0
                     ]
                     [ Html.div [] [ Html.map never grid ]
                     , Html.text "Use the following buttons to rotate and move, alternatively use the arrow keys."
@@ -419,8 +399,7 @@ const_BOX_MARGIN_PX =
 viewParser : Model -> Html FrontendMsg
 viewParser model =
     Html.div []
-        [ Html.text <| ""
-        , Html.h3 [] [ Html.text "Commands" ]
+        [ Html.h3 [] [ Html.text "Commands" ]
         , Html.div [] <|
             List.map (\t -> Html.p [] [ Html.text t ])
                 [ "PLACE X,Y,[NORTH,EAST,SOUTH,WEST]"
@@ -439,9 +418,13 @@ viewParser model =
                 [ Html.Events.onClick ParseAndExecuteCommand ]
                 [ Html.text "GO" ]
             ]
-        , Html.div []
-            [ Html.text <| (model.parseError |> Maybe.withDefault "")
-            ]
+        , Html.text <|
+            case model.inputText |> Command.parse of
+                Result.Ok command ->
+                    "Ok: " ++ Command.toString command
+
+                Result.Err err ->
+                    "Err: " ++ Command.parseErrorToString err
         ]
 
 
@@ -466,7 +449,6 @@ viewCommandHistory commandHistory =
                     String.join " "
                         [ "Place", Types.Direction.toString dir, Types.Position.toString pos ]
 
-                -- TODO
                 RotateLeft ->
                     "Rotate Left"
 
@@ -492,10 +474,27 @@ viewCommandHistory commandHistory =
         ]
 
 
+app =
+    Lamdera.frontend
+        { init = init
+        , onUrlRequest = UrlClicked
+        , onUrlChange = UrlChanged
+        , update = update
+        , updateFromBackend = updateFromBackend
+        , subscriptions = subscriptions
+        , view = view >> (\v -> { title = "", body = [ v ] })
+        }
+
+
+subscriptions : Model -> Sub FrontendMsg
+subscriptions model =
+    Sub.none
+
+
 viewSimple : Model -> Html FrontendMsg
 viewSimple model =
     let
-        box { withRobot } =
+        viewCell { withRobot } =
             Element.el
                 [ Element.width <| Element.px 100
                 , Element.height <| Element.px 100
@@ -505,8 +504,7 @@ viewSimple model =
                 , Border.color <| Element.rgb 255 255 255
                 , Border.solid
                 ]
-            <|
-                Element.text <|
+                (Element.text <|
                     if withRobot == False then
                         ""
 
@@ -523,29 +521,27 @@ viewSimple model =
 
                             West ->
                                 "<"
+                )
 
-        grid =
+        mapRange f =
+            List.map f (List.range 0 <| Types.Position.const_MAX_XorY)
+
+        viewRow rowIdx =
+            Element.row
+                [ Element.spacing 10, Element.centerY ]
+                (mapRange <|
+                    \colIdx ->
+                        viewCell
+                            { withRobot =
+                                (colIdx == getBoundedInt model.robot.position.x)
+                                    && (rowIdx == getBoundedInt model.robot.position.y)
+                            }
+                )
+
+        viewGrid =
             Element.column
                 [ Element.spacing 10, Element.centerY ]
-            <|
-                List.map
-                    (\row ->
-                        Element.row
-                            [ Element.spacing 10, Element.centerY ]
-                        <|
-                            List.map
-                                (\col ->
-                                    box
-                                        { withRobot =
-                                            -- Render it last so it can be rendered over
-                                            -- all the other boxes/div nodes
-                                            (col == getBoundedInt model.robot.position.x)
-                                                && (row == getBoundedInt model.robot.position.y)
-                                        }
-                                )
-                                (List.range 0 <| Types.Position.const_MAX_XorY)
-                    )
-                    (List.range 0 <| Types.Position.const_MAX_XorY)
+                (mapRange viewRow)
     in
     div
         [ Keyboard.Events.on Keyboard.Events.Keydown <|
@@ -557,25 +553,9 @@ viewSimple model =
                 ]
         , Attr.tabindex 0
         ]
-        [ Element.layout [ Element.centerX, Element.centerY ] <| Element.map never grid
+        [ Element.layout [ Element.centerX, Element.centerY ] <|
+            Element.map never viewGrid
         , Html.text "Use the following buttons to rotate and move the owl, alternatively use the arrow keys."
         , viewDirectionCluster
         , viewParser model
         ]
-
-
-app =
-    Lamdera.frontend
-        { init = init
-        , onUrlRequest = UrlClicked
-        , onUrlChange = UrlChanged
-        , update = update
-        , updateFromBackend = updateFromBackend
-        , subscriptions = subscriptions
-        , view = view >> (\v -> { title = "", body = [ v ] })
-        }
-
-
-subscriptions : Model -> Sub FrontendMsg
-subscriptions model =
-    Time.every 1000 Tick
