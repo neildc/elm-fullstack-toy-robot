@@ -1,5 +1,8 @@
 module Other exposing (..)
 
+import Types.Direction exposing (Direction)
+import Types.Position exposing (Position, BoundedInt)
+
 
 type Command
     = Place Direction Position

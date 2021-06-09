@@ -1,9 +1,12 @@
-module SimpleResult exposing (..)
+module Command.SimpleResult exposing (..)
+
+import Command.Deps exposing (..)
 
 
-type Result error value
-    = Ok value
-    | Err error
+
+-- type Result error value
+--     = Ok value
+--     | Err error
 
 
 type ParseError
@@ -27,8 +30,8 @@ parseCommand input =
             Result.Ok RotateRight
 
         _ ->
-            case String.split " " input of
-                [ "PLACE", placeArgs ] ->
+            case getPlaceArgs input of
+                Just placeArgs ->
                     case splitIntoThree ',' placeArgs of
                         Just ( xStr, yStr, dirStr ) ->
                             case

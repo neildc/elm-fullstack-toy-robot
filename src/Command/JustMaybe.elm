@@ -1,4 +1,6 @@
-module JustMaybe exposing (parseCommand)
+module Command.JustMaybe exposing (parseCommand)
+
+import Command.Deps exposing (..)
 
 
 parseCommand : String -> Maybe Command
@@ -14,8 +16,8 @@ parseCommand input =
             Just RotateRight
 
         _ ->
-            case String.split " " input of
-                [ "PLACE", placeArgs ] ->
+            case getPlaceArgs input of
+                Just placeArgs ->
                     case splitIntoThree ',' placeArgs of
                         Just ( xStr, yStr, dirStr ) ->
                             case

@@ -1,9 +1,22 @@
-module ResultAndThen exposing (ParseError, parseCommand)
+module Command.ResultAndThen exposing (ParseError, parseCommand)
+
+import Command.Deps exposing (..)
 
 
-type Result error value
-    = Ok value
-    | Err error
+-- type Result error value
+--     = Ok value
+--     | Err error
+
+-- fromMaybe : x -> Maybe a -> Result x a
+
+-- andThen : (a -> Result x b) -> Result x a -> Result x b
+
+-- map3 :
+--     (a -> b -> c -> value)
+--     -> Result x a
+--     -> Result x b
+--     -> Result x c
+--     -> Result x value
 
 
 type ParseError
@@ -27,9 +40,9 @@ parseCommand input =
             Result.Ok RotateRight
 
         _ ->
-            getPlaceArgs input
-                |> Result.fromMaybe UnknownCommand
-                |> Result.andThen (splitIntoThree ',' >> Result.fromMaybe CantSplitIntoThree)
+            (getPlaceArgs input |> Result.fromMaybe UnknownCommand)
+                |> Result.andThen
+                    (splitIntoThree ',' >> Result.fromMaybe CantSplitIntoThree)
                 |> Result.andThen
                     (\( xStr, yStr, dirStr ) ->
                         Result.map3

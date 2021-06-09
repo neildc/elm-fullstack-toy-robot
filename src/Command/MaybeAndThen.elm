@@ -1,13 +1,14 @@
-module MaybeAndThen exposing (..)
+module Command.MaybeAndThen exposing (..)
+
+import Command.Deps exposing (..)
+
+-- map : (a -> b) -> Maybe a -> Maybe b
 
 
-map : (a -> b) -> Maybe a -> Maybe b
+-- andThen : (a -> Maybe b) -> Maybe a -> Maybe b
 
 
-andThen : (a -> Maybe b) -> Maybe a -> Maybe b
-
-
-map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
+-- map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
 
 
 parseCommand : String -> Maybe Command

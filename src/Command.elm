@@ -17,6 +17,7 @@ type Command
     | Move
 
 
+toString : Command -> String
 toString c =
     case c of
         Place dir pos ->
@@ -54,18 +55,17 @@ parse input =
             Result.Ok RotateRight
 
         _ ->
-            getPlaceArgs input
-                |> Result.fromMaybe UnknownCommand
-                |> Result.andThen (splitIntoThree >> Result.fromMaybe CantSplitIntoThree)
+            (getPlaceArgs input |> Result.fromMaybe UnknownCommand)
+                |> Result.andThen
+                   (splitIntoThree ',' >> Result.fromMaybe CantSplitIntoThree)
                 |> Result.andThen
                     (\( xStr, yStr, dirStr ) ->
                         Result.map3
-                            (\validX validY validDir -> Place validDir { x = validX, y = validY })
+                            (\x y dir -> Place dir { x = x, y = y })
                             (xStr |> stringToBoundedInt |> Result.fromMaybe PlaceXInvalid)
                             (yStr |> stringToBoundedInt |> Result.fromMaybe PlaceYInvalid)
                             (parseDirection dirStr |> Result.fromMaybe PlaceDirectionInvalid)
                     )
-
 
 getPlaceArgs : String -> Maybe String
 getPlaceArgs input =
@@ -82,9 +82,13 @@ stringToBoundedInt string =
     string |> String.toInt |> Maybe.andThen makeBoundedInt
 
 
-splitIntoThree : String -> Maybe ( String, String, String )
-splitIntoThree input =
-    case String.split "," input of
+splitIntoThree : Char -> String -> Maybe ( String, String, String )
+splitIntoThree delimeter input =
+    let
+        d =
+          (String.fromChar delimeter)
+    in
+    case String.split  d  input of
         [ first, second, third ] ->
             Just ( first, second, third )
 
@@ -111,6 +115,7 @@ parseDirection input =
             Nothing
 
 
+parseErrorToString : ParseError -> String
 parseErrorToString err =
     case err of
         UnknownCommand ->
